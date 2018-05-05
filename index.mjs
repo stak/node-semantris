@@ -56,22 +56,24 @@ class Semantris {
         }
     }
 
-    filterWord(level, filterCurrentWords = true) {
+    filterWord(levels, filterCurrentWords = true) {
         let words = this.words;
-        if (typeof level === 'number') {
-            words = words.filter(w => w.level === level);
+        if (typeof levels === 'number') {
+            words = words.filter(w => w.level === levels);
+        } else if (levels instanceof Array) {
+            words = words.filter(w => levels.includes(w.level));
         }
         if (filterCurrentWords) {
             words = words.filter(w => !this.state.candidates.any(c => c.word === w.word));
         }
         return words;
     }
-    selectWord(level, filterCurrentWords = true) {
-        const words = this.filterWord(level, filterCurrentWords);
+    selectWord(levels, filterCurrentWords = true) {
+        const words = this.filterWord(levels, filterCurrentWords);
         return util.getRandomElement(words);
     }
-    selectWords(num, level, filterCurrentWords = true) {
-        const words = this.filterWord(level, filterCurrentWords);
+    selectWords(num, levels, filterCurrentWords = true) {
+        const words = this.filterWord(levels, filterCurrentWords);
         return util.getRandomElements(words, num);
     }
 }
