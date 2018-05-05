@@ -15,7 +15,7 @@ export class MatchResult {
         this.rank = array[2] ? Number(array[2]) : 1;
 
         this.input = input;
-        this.isTarget = targets.any(t => t.word === this.word);
+        this.isTarget = targets.some(t => t.word === this.word);
         this.level = candidates.find(c => c.word === this.word).level;
     }
 

@@ -1,5 +1,6 @@
 'use strict';
 import chalk from 'chalk';
+import readline from 'readline';
 
 import SemantrisAPI from './api';
 import SemantrisGameState from './state';
@@ -19,6 +20,8 @@ class Semantris {
     async gameStart(gameMode = GAMEMODE_ARCADE) {
         this.words = await this.api.start(gameMode);
         this.gameReset(gameMode);
+
+        return this;
     }
 
     gameReset(gameMode = GAMEMODE_ARCADE) {
@@ -26,16 +29,20 @@ class Semantris {
             return this.selectWords(num, levels, false);
         });
         this.view();
+
+        return this;
     }
 
     async gameInput(input) {
-        const matchResult = await this.api.rank(input, ...paramsForRankthis.state.paramsForRank);
+        const matchResult = await this.api.rank(input,
+                                    ...this.state.paramsForRank);
         let next, cont;
         [next, cont] = this.updator.input(this.state, matchResult);
 
         this.state = next;
-
         this.view();
+
+        return this;
     }
 
     view() {
@@ -64,7 +71,8 @@ class Semantris {
             words = words.filter(w => levels.includes(w.level));
         }
         if (filterCurrentWords) {
-            words = words.filter(w => !this.state.candidates.any(c => c.word === w.word));
+            words = words.filter(w => this.state.candidates.every(
+                                 c => c.word !== w.word));
         }
         return words;
     }
@@ -78,7 +86,24 @@ class Semantris {
     }
 }
 
-const sem = new Semantris();
-sem.gameStart().then(() => {
-    
+function line() {
+    return new Promise((resolve, reject) => {
+        const rl = readline.createInterface(process.stdin, process.stdout);
+        rl.setPrompt('\n> ');
+        rl.prompt();
+
+        rl.on('line', (line) => {
+            resolve(line);
+        }).on('close', () => {
+            process.stdin.destroy();
+            reject();
+        });
+    });
+}
+
+new Semantris().gameStart().then(async (game) => {
+    for (;;) {
+        const input = await line();
+        await game.gameInput(input);
+    }
 });
