@@ -17,37 +17,44 @@ class Semantris {
         this.state = null;
     }
 
-    async gameStart(gameMode = GAMEMODE_ARCADE) {
-        this.words = await this.api.start(gameMode);
-        this.gameReset(gameMode);
-
+    reset() {
+        this.state = null;
         return this;
     }
 
-    gameReset(gameMode = GAMEMODE_ARCADE) {
-        [this.state,] = this.updator.reset(null, gameMode, (num, levels) => {
+    async update(action, ...args) {
+        args.unshift(this.state);
+        const {next, feedback, cont} = this.updator[action].apply(this.updator, args);
+
+        console.log(chalk.yellow("update(" + action + ") => " + feedback));
+        
+        this.state = next;
+        await this.view(feedback);
+        
+        return cont ? await this.update(cont) : this;
+    }
+
+    async gameStart(gameMode = GAMEMODE_ARCADE) {
+        this.words = await this.api.start(gameMode);
+
+        return await this.gameReset(gameMode);
+    }
+
+    async gameReset(gameMode = GAMEMODE_ARCADE) {
+        return await this.reset().update('init', gameMode, (num, levels) => {
             return this.selectWords(num, levels, false);
         });
-        this.view();
-
-        return this;
     }
 
     async gameInput(input) {
         const matchResult = await this.api.rank(input,
                                     ...this.state.paramsForRank);
-        let next, cont;
-        [next, cont] = this.updator.input(this.state, matchResult);
-
-        this.state = next;
-        this.view();
-
-        return this;
+        return await this.update('input', matchResult);
     }
 
-    view() {
-        process.stdout.write('\x1b[2J');
-        process.stdout.write('\x1b[0f');
+    async view(feedback) {
+        // process.stdout.write('\x1b[2J');
+        // process.stdout.write('\x1b[0f');
 
         for (let i = this.state.candidates.length - 1; i >= 0; --i) {
             const e = this.state.candidates[i];
@@ -60,6 +67,21 @@ class Semantris {
             if (this.state.targetBorder === i) {
                 console.log("----------------------");
             }
+        }
+
+        // feedback に応じた演出・ウェイト
+        switch (feedback) {
+            case SemantrisGameUpdator.FB_INPUT_FAIL:
+                break;
+            case SemantrisGameUpdator.FB_INPUT_SUCCESS:
+            case SemantrisGameUpdator.FB_DESTROY_NORMAL:
+                await util.sleep(400);
+                break;
+            case SemantrisGameUpdator.FB_DESTROY_STREAK:
+                await util.sleep(1500);
+                break;
+            default:
+                break;
         }
 
         process.stdout.write('\n> '); // prompt
@@ -116,7 +138,7 @@ new Semantris().gameStart().then(async (game) => {
         if (input) {
             await game.gameInput(input);
         } else {
-            game.view();
+            await game.view();
         }
     }
 });

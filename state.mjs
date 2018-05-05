@@ -1,5 +1,11 @@
 
+
 export default class SemantrisGameState {
+    static get STATE_INIT() { return 0; }
+    static get STATE_PLAY() { return 1; }
+    static get STATE_ANIM() { return 2; }
+    static get STATE_OVER() { return 3; }
+
     constructor(o) {
         if (o instanceof SemantrisGameState) {
             Object.assign(this, o);
@@ -26,6 +32,9 @@ export default class SemantrisGameState {
             // 表示ワード、updator によって更新される
             this.candidates = null;
             this.targetIndexes = null;
+
+            // 内部状態
+            this.innerState = SemantrisGameState.STATE_INIT;
         }
     }
 

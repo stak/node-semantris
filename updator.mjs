@@ -1,7 +1,25 @@
 import SemantrisGameState from './state';
 
-export default class SemantrisGameUpdator {
-    static reset(state, gameMode, wordSelector) {
+class UpdateResult {
+    constructor(next, feedback, cont) {
+        this.next = next;
+        this.feedback = feedback;
+        this.cont = cont;
+    }
+}
+function _(next, feedback, cont) {
+    return new UpdateResult(next, feedback, cont);
+}
+
+class SemantrisGameUpdator {
+    static get FB_INIT() { return 'init'; }
+    static get FB_DESTROY_FINISH() { return 'destroyed'; }
+    static get FB_DESTROY_NORMAL() { return 'destroy'; }
+    static get FB_DESTROY_STREAK() { return 'streak'; }
+    static get FB_INPUT_SUCCESS() { return 'success'; }
+    static get FB_INPUT_FAIL() { return 'fail'; }
+
+    static init(state, gameMode, wordSelector) {
         state = state || new SemantrisGameState();
 
         const next = new SemantrisGameState(state);
@@ -22,9 +40,8 @@ export default class SemantrisGameUpdator {
         const head = decideFillBorder(state) - decideTargetNum(state);
         next.targetIndexes = Array(decideTargetNum(state)).fill()
                              .map((e, i) => head + i);
-        console.log(head);
-        console.log(next.targetIndexes);
-        return [next, true];
+
+        return _(next, Class.FB_INIT);
     }
 
     static input(state, matchResults) {
@@ -40,17 +57,18 @@ export default class SemantrisGameUpdator {
 
         // ターゲットをボーダー以下にすることができたか
         if (typeof index !== 'undefined') {
-            // ワードの破壊、スコア加算は別途 update() で行う
-            return [next, true];
+            next.innerState = SemantrisGameState.STATE_ANIM;
+            // ワードの破壊、スコア加算は別途 destroy() で行う
+            return _(next, Class.FB_INPUT_SUCCESS, Class.destroy.name);
         } else {
             // 失敗
             next.failCount++;
             next.streakProgress = 0;
-            return [next, false];
+            return _(next, Class.FB_INPUT_FAIL);
         }
     }
 
-    static _updateStreak(state) {
+    static _destroyStreak(state) {
         const next = new SemantrisGameState(state);
         next.streakCount++;
 
@@ -59,11 +77,12 @@ export default class SemantrisGameUpdator {
 
         next.breakCount += next.targetIndexes.length;
         next.targetIndexes.length = 0;
-
-        return next;
+        
+        next.innerState = SemantrisGameState.STATE_PLAY;
+        return _(next, Class.FB_DESTROY_STREAK);
     }
 
-    static _updateBorder(state) {
+    static _destroyNormal(state) {
         const next = new SemantrisGameState(state);
         const first = next.targetIndexes[0] || next.dieBorder;
         const rest = next.candidates; // 破壊的に更新するのでコピー不要
@@ -82,21 +101,31 @@ export default class SemantrisGameUpdator {
         }
         ++next.streakProgress;
 
-        return next;
+        // 次の連鎖が発生するか見て内部状態を更新
+        const isFinish = Class.destroy(next).feedback 
+                         === Class.FB_DESTROY_FINISH;
+        next.innerState = isFinish ?
+                            SemantrisGameState.STATE_PLAY: // 打ち止め
+                            SemantrisGameState.STATE_ANIM; // 連鎖中
+        
+        return _(next, Class.FB_DESTROY_NORMAL,
+                 !isFinish ? Class.destroy.name : null);
     }
 
-    static update(state) {
-        const first = state.targetIndexes[0] || state.dieBorder;
+    static destroy(state) {
+        const first = state.targetIndexes[0];
         
-        if (next.streakProgress === next.streakMax) {
+        // TODO: ゲームパラメータの更新タイミング
+
+        if (state.streakProgress === state.streakMax) {
             // Streak Bonus で全消し
-            return [SemantrisGameUpdator._updateStreak(state), true];
-        } else if (first < next.targetBorder) {
+            return Class._destroyStreak(state);
+        } else if (typeof first === 'number' && first < state.targetBorder) {
             // 通常のライン消し
-            return [SemantrisGameUpdator._updateBorder(state), true];
+            return Class._destroyNormal(state);
         } else {
-            // ボーダー以内にターゲットがない（＝連鎖終了）
-            return [state, false]; // 状態更新なし
+            // 更新なし
+            return _(state, Class.FB_DESTROY_FINISH);
         }
     }
 
@@ -105,6 +134,7 @@ export default class SemantrisGameUpdator {
     }
 }
 
+const Class = SemantrisGameUpdator;
 
 function stateToData(state, table) {
     if (state.stage > table.length - 1) {
@@ -186,3 +216,5 @@ function decideDieBorder(state) {
 function decideFallFrame(state) {
     return 120; // TEMP
 }
+
+export default SemantrisGameUpdator;
