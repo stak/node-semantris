@@ -84,10 +84,9 @@ class SemantrisGameUpdator {
 
     static _destroyNormal(state) {
         const next = new SemantrisGameState(state);
-        const first = next.targetIndexes[0] || next.dieBorder;
+        const first = next.targetIndexes.shift();
         const rest = next.candidates; // 破壊的に更新するのでコピー不要
 
-        next.targetIndexes.shift();
         next.breakCount++;
         for (let i = Math.min(next.targetBorder, rest.length) - 1; i >= first; --i) {
             if (i === first || !rest[i].isTarget) {
