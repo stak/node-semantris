@@ -61,6 +61,8 @@ class Semantris {
                 console.log("----------------------");
             }
         }
+
+        process.stdout.write('\n> '); // prompt
     }
 
     filterWord(levels, filterCurrentWords = true) {
@@ -86,24 +88,35 @@ class Semantris {
     }
 }
 
-function line() {
+function line(rl) {
     return new Promise((resolve, reject) => {
-        const rl = readline.createInterface(process.stdin, process.stdout);
-        rl.setPrompt('\n> ');
-        rl.prompt();
-
-        rl.on('line', (line) => {
+        function onLine(line) {
             resolve(line);
-        }).on('close', () => {
+            rl.removeListener('close', onClose);
+        }
+        function onClose() {
             process.stdin.destroy();
             reject();
-        });
+            rl.removeListener('line', onLine);
+        }
+        rl.once('line', onLine)
+          .once('close', onClose);
     });
 }
 
 new Semantris().gameStart().then(async (game) => {
-    for (;;) {
-        const input = await line();
-        await game.gameInput(input);
+    const rl = readline.createInterface(process.stdin);
+    for (let input;;) {
+        try {
+            input = await line(rl);
+        } catch (e) {
+            console.log("(exit)");
+            break;
+        }
+        if (input) {
+            await game.gameInput(input);
+        } else {
+            game.view();
+        }
     }
 });
