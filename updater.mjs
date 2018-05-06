@@ -79,12 +79,15 @@ class SemantrisGameUpdater {
     static _destroyStreak(state) {
         const next = new SemantrisGameState(state);
         next.streakCount++;
+        next.streakProgress = 0;
+        
+        // 次回 streak 回数は当該ボーナスの得点は含まずに計算する
+        next.streakMax = decideStreakMax(state);
 
-        next.breakLine += rest.length;
-        rest.length = 0;
-
+        next.breakLine += next.height;
         next.breakCount += next.targetIndexes.length;
-        next.targetIndexes.length = 0;
+        next.candidates = [];
+        next.targetIndexes = [];
         
         next.innerState = SemantrisGameState.STATE_ANIM_STREAK;
         return _(next, Class.FB_DESTROY_STREAK);

@@ -33,7 +33,7 @@ class Semantris {
     reset(gameMode = GAMEMODE_ARCADE) {
         this.state = null;
         const feedback = this.update('init', gameMode, this.selectWord.bind(this));
-        this.view('init', feedback);
+        this.view(this.state, 'init', feedback);
         this._mainLoop().then(); // 初期化が終わったらメインループ開始
         
         return this;
@@ -44,7 +44,7 @@ class Semantris {
         while (feedback !== SemantrisGameUpdater.FB_TICK_DIE) {
             await util.sleep(16);
             feedback = this.update('tick');
-            this.view('tick', feedback);
+            this.view(this.state, 'tick', feedback);
         }
     }
 
@@ -52,10 +52,10 @@ class Semantris {
         const matchResult = await this.api.rank(input,
                                     ...this.state.paramsForRank);
         const feedback = this.update('input', matchResult);
-        this.view('input', feedback);
+        this.view(this.state, 'input', feedback);
     }
 
-    view(action, feedback) {
+    view(state, action, feedback) {
         if (feedback === SemantrisGameUpdater.FB_TICK) {
             return;
         }
@@ -63,6 +63,7 @@ class Semantris {
         process.stdout.write('\x1b[2J');
         process.stdout.write('\x1b[0f');
 
+        // debug
         if (action) {
             console.log(chalk.yellow('(' + action + ')') + ' => ' +
                         chalk.magenta(feedback));
@@ -70,24 +71,46 @@ class Semantris {
             console.log('');
         }
         
-        const drawWord = (word, bg, fore) => {
-            const padding = (word.word + '                        ').slice(0, 24);
-            console.log(bg(fore(padding)));
-        };
+        const WIDTH = 24;
+        const LEFT = 8;
 
-        for (let i = this.state.dieBorder; i >= 0; --i) {
-            const w = this.state.candidates[i];
-            if (w) {
-                const bg = i < this.state.targetBorder ?
-                           chalk.bgBlackBright : chalk.bgBlack;
-                const fore = this.state.targetIndexes.includes(i) ?
-                             chalk.blue : chalk.white;
-                drawWord(w, bg, fore);
-            } else {
-                console.log("");
+        // ワード
+        (function renderWords() {
+            const drawWord = (word, bg, fore) => {
+                const spaces = Array(WIDTH).fill(' ').join('');
+                const padding = (word.word + spaces).slice(0, WIDTH);
+                console.log(bg(fore(padding)));
+            };
+
+            for (let i = state.dieBorder; i >= 0; --i) {
+                const w = state.candidates[i];
+                if (w) {
+                    const bg = i < state.targetBorder ?
+                            chalk.bgBlackBright : chalk.bgBlack;
+                    const fore = state.targetIndexes.includes(i) ?
+                                chalk.cyan : chalk.white;
+                    drawWord(w, bg, fore);
+                } else {
+                    console.log("");
+                }
             }
+        })();
 
-        }
+        // ゲージ
+        (function renderStreakGauge() {
+            const unitLen = Math.round(WIDTH / state.streakMax);
+            const unit = '[' + Array(unitLen).join(' ') + ']';
+
+            console.log("");
+            for (let i = 0; i < state.streakMax; ++i) {
+                if (i < state.streakProgress) {
+                    process.stdout.write(chalk.bgBlue(unit));
+                } else {
+                    process.stdout.write(unit);
+                }
+            }
+            console.log("");
+        })();
 
         // 演出・ウェイト
         switch (feedback) {
