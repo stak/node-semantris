@@ -18,6 +18,7 @@ class Semantris {
         });
         this.words = null;
         this.state = null;
+        this.connecting = false;
     }
 
     update(action, ...args) {
@@ -29,7 +30,9 @@ class Semantris {
     }
 
     async start(gameMode = GAMEMODE_ARCADE) {
+        this.connecting = true;
         this.words = await this.api.start(gameMode);
+        this.connecting = false;
 
         return this.reset(gameMode);
     }
@@ -47,14 +50,21 @@ class Semantris {
         let feedback;
         while (feedback !== FB.TICK_DIE) {
             await util.sleep(16);
+            if (this.connecting) {
+                continue; // 通信中は tick しない
+            }
             feedback = this.update('tick');
             this.view(this.state, 'tick', feedback);
         }
     }
 
     async input(input) {
+        this.connecting = true;
+        // TODO: 
         const matchResult = await this.api.rank(input,
                                     ...this.state.paramsForRank);
+        this.connecting = false;
+
         const feedback = this.update('input', matchResult);
         this.view(this.state, 'input', feedback);
     }
