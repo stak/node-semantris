@@ -35,7 +35,7 @@ class Semantris {
 
     reset(gameMode = GAMEMODE_ARCADE) {
         this.state = null;
-        const feedback = this.update('init', gameMode, this.selectWords.bind(this));
+        const feedback = this.update('init', gameMode, this.selectWord.bind(this));
         this.view(feedback);
         this._mainLoop().then(); // 初期化が終わったらメインループ開始
         
@@ -137,4 +137,5 @@ new Semantris().start().then(async (game) => {
             game.view();
         }
     }
+    process.exit();
 });

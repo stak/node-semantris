@@ -43,8 +43,8 @@ class SemantrisGameUpdater {
         next.wordSelector = wordSelector;
 
         // ワードの初期化
-        next.candidates = next.makeInitialWords();
-        next.targets = next.candidates.slice(-next.targetNum);
+        next.candidates = [];
+        next.targets = [];
 
         // プレイ可能状態にする
         next.innerState = SemantrisGameState.STATE_PLAY;
@@ -141,7 +141,7 @@ class SemantrisGameUpdater {
         // ターゲットは fill 領域の最後（上部）に来る
         const fillSpace = next.fillBorder - next.height;
         const targetNeeds = next.targetNum - next.targets.length;
-        if (fillSpace <= targetNeeds) {
+        if (fillSpace < targetNeeds) {
             next.targetIndexes.push(next.height - 1);
         }
         return _(next, Class.FB_TICK_FILL);
@@ -296,7 +296,7 @@ function decideFillFrame(state) {
 }
 
 function decideFallFrame(state) {
-    return 120; // TEMP
+    return 10; // TEMP
 }
 
 function decideSortFrame(state) {

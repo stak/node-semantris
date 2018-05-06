@@ -50,10 +50,7 @@ export default class SemantrisGameState {
     }
 
     makeWord() {
-        return this.wordSelector(1, this.wordLevel, this.candidates.map(c => c.word))[0];
-    }
-    makeInitialWords() {
-        return this.wordSelector(this.fillBorder, this.wordLevel);
+        return this.wordSelector(this.wordLevel, this.candidates.map(c => c.word));
     }
 
     get innerState() {
