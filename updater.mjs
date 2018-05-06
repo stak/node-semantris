@@ -28,18 +28,8 @@ class SemantrisGameUpdater {
         const next = new SemantrisGameState(state);
 
         // ゲームパラメータの初期化
+        Class.updateGameParams(next);
         next.gameMode = gameMode;
-        next.streakMax = decideStreakMax(state);
-        next.wordLevel = decideWordLevel(state);
-        next.targetNum = decideTargetNum(state);
-        next.targetBorder = decideTargetBorder(state);
-        next.fillBorder = decideFillBorder(state);
-        next.dieBorder = decideDieBorder(state);
-        next.fallFrame = decideFallFrame(state);
-        next.fillFrame = decideFillFrame(state);
-        next.sortFrame = decideSortFrame(state);
-        next.destroyFrame = decideDestroyFrame(state);
-        next.streakFrame = decideStreakFrame(state);
         next.wordSelector = wordSelector;
 
         // ワードの初期化
@@ -50,6 +40,20 @@ class SemantrisGameUpdater {
         next.innerState = SemantrisGameState.STATE_PLAY;
 
         return _(next, Class.FB_INIT);
+    }
+
+    static updateGameParams(state) {
+        state.streakMax = decideStreakMax(state);
+        state.wordLevel = decideWordLevel(state);
+        state.targetNum = decideTargetNum(state);
+        state.targetBorder = decideTargetBorder(state);
+        state.fillBorder = decideFillBorder(state);
+        state.dieBorder = decideDieBorder(state);
+        state.fallFrame = decideFallFrame(state);
+        state.fillFrame = decideFillFrame(state);
+        state.sortFrame = decideSortFrame(state);
+        state.destroyFrame = decideDestroyFrame(state);
+        state.streakFrame = decideStreakFrame(state);
     }
 
     static input(state, matchResults) {
@@ -81,13 +85,14 @@ class SemantrisGameUpdater {
         next.streakCount++;
         next.streakProgress = 0;
 
-        // 次回 streak 回数は当該ボーナスの得点は含まずに計算する
-        next.streakMax = decideStreakMax(state);
-
         next.breakLine += next.height;
         next.breakCount += next.targetIndexes.length;
         next.candidates = [];
         next.targetIndexes = [];
+
+        Class.updateGameParams(next);
+        // 次回 streak 回数は当該ボーナスの得点は含まずに計算する
+        next.streakMax = decideStreakMax(state);
         
         next.innerState = SemantrisGameState.STATE_ANIM_STREAK;
         return _(next, Class.FB_DESTROY_STREAK);
@@ -100,7 +105,7 @@ class SemantrisGameUpdater {
 
         next.breakCount++;
         for (let i = Math.min(next.targetBorder, rest.length) - 1; i >= first; --i) {
-            if (i === first || !rest[i].isTarget) {
+            if (i === first || !next.targetIndexes.includes(i)) {
                 next.breakLine++;
                 rest.splice(i, 1);
                 next.targetIndexes = next.targetIndexes.map(i => i - 1);
@@ -110,6 +115,10 @@ class SemantrisGameUpdater {
             }
         }
         ++next.streakProgress;
+
+        Class.updateGameParams(next);
+        // streakMax は通常破壊時には更新しない
+        next.streakMax = state.streakMax;
 
         next.innerState = SemantrisGameState.STATE_ANIM_DESTROY;
         return _(next, Class.FB_DESTROY_NORMAL);
@@ -125,7 +134,6 @@ class SemantrisGameUpdater {
         const first = state.targetIndexes[0];
         
         // TODO: ゲームパラメータの更新タイミング
-
         if (state.streakProgress === state.streakMax) {
             // Streak Bonus で全消し
             return Class._destroyStreak(state);
