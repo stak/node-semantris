@@ -7,7 +7,7 @@ import ttyRenderer from './ttyRenderer';
 import {FB, GAMEMODE_ARCADE, GAMEMODE_BLOCKS} from './define';
 import * as util from './util';
 
-class Semantris {
+export default class Semantris {
     constructor(renderer = ttyRenderer, updater = SemantrisGameUpdater, tuner = SemantrisParamTuner) {
         this.api = new SemantrisAPI();
         this.renderer = renderer;
@@ -90,23 +90,3 @@ class Semantris {
         return util.getRandomElements(words, num);
     }
 }
-
-new Semantris().start().then(async (game) => {
-    for (let input;;) {
-        try {
-            input = await util.line();
-        } catch (e) {
-            console.log("(exit)");
-            break;
-        }
-        if (game.state.isGameOver) {
-            break;
-        }
-        if (input) {
-            await game.input(input);
-        } else {
-            game.renderer(game.state);
-        }
-    }
-    process.exit();
-});
