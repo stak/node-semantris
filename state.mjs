@@ -7,7 +7,7 @@ export default class SemantrisGameState {
     static get STATE_INIT() { return 0; }
     static get STATE_PLAY() { return 1; }
     static get STATE_ANIM_SORT() { return 2; }
-    static get STATE_ANIM_DESTROY() { return 3; }
+    static get STATE_ANIM_CHAIN() { return 3; }
     static get STATE_ANIM_STREAK() { return 4 }
     static get STATE_DEAD() { return 5; }
 
@@ -75,11 +75,20 @@ export default class SemantrisGameState {
     get stage() {
         return Math.floor(this.score / STAGE_SPAN);
     }
+    get isInit() {
+        return this.innerState === SemantrisGameState.STATE_INIT;
+    }
     get isGameOver() {
         return this.innerState === SemantrisGameState.STATE_DEAD;
     }
-    get isPlaying() {
-        return this.innerState === SemantrisGameState.STATE_PLAY;
+    get isActive() {
+        return this.innerState === SemantrisGameState.STATE_PLAY ||
+               this.innerState === SemantrisGameState.STATE_ANIM_CHAIN;
+    }
+    get isAnimating() {
+        return [SemantrisGameState.STATE_ANIM_SORT,
+                SemantrisGameState.STATE_ANIM_CHAIN,
+                SemantrisGameState.STATE_ANIM_STREAK].includes(this.innerState);
     }
     get paramsForRank() {
         return [this.candidates, this.targets, this.gameMode];

@@ -27,6 +27,7 @@ export class MatchResult {
 }
 
 export const FB = makeEnumObject([
+    'NONE',
     'INIT',
     'DESTROY_FINISH',
     'DESTROY_NORMAL',

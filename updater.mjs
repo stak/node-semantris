@@ -104,7 +104,7 @@ class SemantrisGameUpdater {
         this._updateGameParams(next);
         next.streakMax = cache;
         
-        next.innerState = SemantrisGameState.STATE_ANIM_STREAK;
+        next.innerState = SemantrisGameState.STATE_PLAY;
         return _(next, FB.DESTROY_STREAK);
     }
 
@@ -124,13 +124,23 @@ class SemantrisGameUpdater {
                 // それは消さずに残す（連鎖するため）
             }
         }
-        ++next.streakProgress;
 
         this._updateGameParams(next);
         // streakMax は通常破壊時には更新しない
         next.streakMax = state.streakMax;
 
-        next.innerState = SemantrisGameState.STATE_ANIM_DESTROY;
+        if (++next.streakProgress === next.streakMax) {
+            // 全消しが控えている場合
+            // 待機時間が異なり、その間追加ワードが降ってこない状態
+            next.innerState = SemantrisGameState.STATE_ANIM_STREAK;
+        } else if (next.targetIndexes.length && next.targetIndexes[0] < next.targetBorder) {
+            // 破壊の連鎖中、追加ワードは降ってくるが新規入力は保留とする状態
+            next.innerState = SemantrisGameState.STATE_ANIM_CHAIN;
+        } else {
+            // 破壊終了
+            next.innerState = SemantrisGameState.STATE_PLAY;
+        }
+        
         return _(next, FB.DESTROY_NORMAL);
     }
 
@@ -143,7 +153,6 @@ class SemantrisGameUpdater {
     _destroy(state) {
         const first = state.targetIndexes[0];
         
-        // TODO: ゲームパラメータの更新タイミング
         if (state.streakProgress === state.streakMax) {
             // Streak Bonus で全消し
             return this._destroyStreak(state);
@@ -202,7 +211,7 @@ class SemantrisGameUpdater {
         case SemantrisGameState.STATE_ANIM_SORT:
             frame = next.sortFrame;
             break;
-        case SemantrisGameState.STATE_ANIM_DESTROY:
+        case SemantrisGameState.STATE_ANIM_CHAIN:
             frame = next.destroyFrame;
             break;
         case SemantrisGameState.STATE_ANIM_STREAK:
@@ -223,13 +232,25 @@ class SemantrisGameUpdater {
         const next = new SemantrisGameState(state);
         next.currentTime++;
 
-        if (next.isPlaying) {
-            return this._tickPlaying(next);
-        } else if (next.isGameOver) {
-            return [state, FB.TICK_DIE]; // 状態更新しない
-        } else {
-            return this._tickWaiting(next);
+        if (next.isGameOver || next.isInit) {
+            return _(state, FB.NONE); // 何もしない
         }
+        // TODO: destroy 待ち中にも fill はくる
+        // TODO: destroy 後に target ひとつもない場合 fill 範囲外でもターゲットが即くる
+        let result = null;
+        if (next.isAnimating) {
+            result = this._tickWaiting(next);
+            // ウェイトを進めて、何か起こっていればそれで確定
+            if (result.feedback !== FB.TICK) {
+                return result;
+            }
+            // 単にウェイト待ちであれば、
+        }
+        if (next.isActive) {
+            // _tickWaiting() の結果より _tickPlaying() の結果を優先
+            result = this._tickPlaying(next);
+        }
+        return result;
     }
 }
 

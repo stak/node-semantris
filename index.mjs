@@ -182,7 +182,7 @@ new Semantris().start().then(async (game) => {
         if (input) {
             await game.input(input);
         } else {
-            game.view();
+            game.view(game.state);
         }
     }
     process.exit();

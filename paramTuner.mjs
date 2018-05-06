@@ -5,10 +5,7 @@ export default class SementrisParamTuner {
     }
     
     static _stateToData(state, table) {
-        if (state.stage > table.length - 1) {
-            state.stage = table.length - 1;
-        }
-        return table[state.stage];
+        return table[Math.min(state.stage, table.length - 1)];
     }
 
     static streakMax(state) {
