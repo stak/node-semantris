@@ -11,7 +11,7 @@ import * as util from './util';
 
 class Semantris {
     constructor(updater = SemantrisGameUpdater, tuner = SemantrisParamTuner) {
-        this.api = new SemantrisAPI('curated23', 'SqYg6-xZ44vb_Z4');
+        this.api = new SemantrisAPI();
         this.updater = new updater({
             paramTuner: tuner,
             wordSelector: this.selectWord.bind(this)
@@ -78,12 +78,14 @@ class Semantris {
         process.stdout.write('\x1b[0f');
 
         // debug
+        /*
         if (action) {
             console.log(chalk.yellow('(' + action + ')') + ' => ' +
                         chalk.magenta(feedback));
         } else {
             console.log('');
         }
+        */
         
         const WIDTH = 24;
         const LEFT = 16;
@@ -134,6 +136,10 @@ class Semantris {
             write(s);
         })();
 
+        if (feedback === FB.TICK_DIE) {
+            write(chalk.bgRed(chalk.white('       GAME  OVER       ')));
+            write(chalk.green('SCORE = ' + state.score));
+        }
         console.log(buffer);
 
         // 演出・ウェイト
@@ -184,9 +190,6 @@ new Semantris().start().then(async (game) => {
             break;
         }
         if (game.state.isGameOver) {
-            console.log("");
-            console.log(chalk.red('GAME OVER'));
-            console.log(chalk.green('SCORE = ' + game.state.score));
             break;
         }
         if (input) {

@@ -5,6 +5,7 @@ import {GAMEMODE_ARCADE,
         MatchResult} from './define';
 
 const BASE_URI = 'https://research.google.com/semantris/';
+const DEFAULT_WHITELIST = 'curated23';
 
 const RES_FIELD = {
     start: {
@@ -20,8 +21,8 @@ const RES_FIELD = {
 
 export default class SemantrisAPI {
     constructor(whitelistIndex, leaderboardToken) {
-        this.whitelistIndex = whitelistIndex || '';
-        this.leaderboardToken = leaderboardToken || '';
+        this.whitelistIndex = whitelistIndex || DEFAULT_WHITELIST;
+        this.leaderboardToken = leaderboardToken || null;
         this.requestId = 1;
     }
 
