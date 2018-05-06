@@ -73,9 +73,9 @@ class Semantris {
         
         const WIDTH = 24;
         const LEFT = 16;
+        const pad = Array(LEFT + 1).join(' ');
         let buffer = '';
         function write(str = '') {
-            const pad = Array(LEFT).join(' ');
             buffer += str.split('\n')
                          .map(line => pad + line)
                          .join('\n') + '\n';
@@ -84,7 +84,7 @@ class Semantris {
         // ワード
         (function renderWords() {
             const renderWord = (word, bg, fore) => {
-                const spaces = Array(WIDTH).fill(' ').join('');
+                const spaces = Array(WIDTH + 1).join(' ');
                 const padding = (word.word + spaces).slice(0, WIDTH);
                 write(bg(fore(padding)));
             };
@@ -106,7 +106,7 @@ class Semantris {
         // ゲージ
         (function renderStreakGauge() {
             const unitLen = Math.round(WIDTH / state.streakMax);
-            const unit = '[' + Array(unitLen).join(' ') + ']';
+            const unit = '[' + Array(unitLen - 1).join(' ') + ']';
 
             write();
             let s = '';
@@ -118,7 +118,6 @@ class Semantris {
                 }
             }
             write(s);
-            write();
         })();
 
         console.log(buffer);
@@ -136,7 +135,7 @@ class Semantris {
                 break;
         }
 
-        process.stdout.write('\n> '); // prompt
+        process.stdout.write(pad + '> '); // prompt
     }
 
     filterWord(levels, excludes = []) {
