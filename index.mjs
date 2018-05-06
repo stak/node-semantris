@@ -20,9 +20,6 @@ class Semantris {
         args.unshift(this.state);
         const {next, feedback} = this.updater[action].apply(this.updater, args);
 
-        console.log(chalk.yellow("update(" + action + ")") + " => " +
-                    chalk.magenta(feedback));
-        
         this.state = next;
         return feedback;
     }
@@ -36,7 +33,7 @@ class Semantris {
     reset(gameMode = GAMEMODE_ARCADE) {
         this.state = null;
         const feedback = this.update('init', gameMode, this.selectWord.bind(this));
-        this.view(feedback);
+        this.view('init', feedback);
         this._mainLoop().then(); // 初期化が終わったらメインループ開始
         
         return this;
@@ -47,7 +44,7 @@ class Semantris {
         while (feedback !== SemantrisGameUpdater.FB_TICK_DIE) {
             await util.sleep(16);
             feedback = this.update('tick');
-            this.view(feedback);
+            this.view('tick', feedback);
         }
     }
 
@@ -55,27 +52,41 @@ class Semantris {
         const matchResult = await this.api.rank(input,
                                     ...this.state.paramsForRank);
         const feedback = this.update('input', matchResult);
-        this.view(feedback);
+        this.view('input', feedback);
     }
 
-    view(feedback) {
+    view(action, feedback) {
         if (feedback === SemantrisGameUpdater.FB_TICK) {
             return;
         }
-        // process.stdout.write('\x1b[2J');
-        // process.stdout.write('\x1b[0f');
+        
+        process.stdout.write('\x1b[2J');
+        process.stdout.write('\x1b[0f');
 
-        for (let i = this.state.candidates.length - 1; i >= 0; --i) {
-            const e = this.state.candidates[i];
-            if (this.state.targetIndexes.includes(i)) {
-                console.log(chalk.blue(e.word));
+        if (action) {
+            console.log(chalk.yellow('(' + action + ')') + ' => ' +
+                        chalk.magenta(feedback));
+        } else {
+            console.log('');
+        }
+        
+        const drawWord = (word, bg, fore) => {
+            const padding = (word.word + '                        ').slice(0, 24);
+            console.log(bg(fore(padding)));
+        };
+
+        for (let i = this.state.dieBorder; i >= 0; --i) {
+            const w = this.state.candidates[i];
+            if (w) {
+                const bg = i < this.state.targetBorder ?
+                           chalk.bgBlackBright : chalk.bgBlack;
+                const fore = this.state.targetIndexes.includes(i) ?
+                             chalk.blue : chalk.white;
+                drawWord(w, bg, fore);
             } else {
-                console.log(e.word);
+                console.log("");
             }
 
-            if (this.state.targetBorder === i) {
-                console.log("----------------------");
-            }
         }
 
         // 演出・ウェイト

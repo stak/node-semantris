@@ -296,7 +296,7 @@ function decideFillFrame(state) {
 }
 
 function decideFallFrame(state) {
-    return 10; // TEMP
+    return 120; // TEMP
 }
 
 function decideSortFrame(state) {
