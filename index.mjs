@@ -72,14 +72,21 @@ class Semantris {
         }
         
         const WIDTH = 24;
-        const LEFT = 8;
+        const LEFT = 16;
+        let buffer = '';
+        function write(str = '') {
+            const pad = Array(LEFT).join(' ');
+            buffer += str.split('\n')
+                         .map(line => pad + line)
+                         .join('\n') + '\n';
+        }
 
         // ワード
         (function renderWords() {
-            const drawWord = (word, bg, fore) => {
+            const renderWord = (word, bg, fore) => {
                 const spaces = Array(WIDTH).fill(' ').join('');
                 const padding = (word.word + spaces).slice(0, WIDTH);
-                console.log(bg(fore(padding)));
+                write(bg(fore(padding)));
             };
 
             for (let i = state.dieBorder; i >= 0; --i) {
@@ -89,9 +96,9 @@ class Semantris {
                             chalk.bgBlackBright : chalk.bgBlack;
                     const fore = state.targetIndexes.includes(i) ?
                                 chalk.cyan : chalk.white;
-                    drawWord(w, bg, fore);
+                    renderWord(w, bg, fore);
                 } else {
-                    console.log("");
+                    write();
                 }
             }
         })();
@@ -101,16 +108,20 @@ class Semantris {
             const unitLen = Math.round(WIDTH / state.streakMax);
             const unit = '[' + Array(unitLen).join(' ') + ']';
 
-            console.log("");
+            write();
+            let s = '';
             for (let i = 0; i < state.streakMax; ++i) {
                 if (i < state.streakProgress) {
-                    process.stdout.write(chalk.bgBlue(unit));
+                    s += chalk.bgBlue(unit);
                 } else {
-                    process.stdout.write(unit);
+                    s += unit;
                 }
             }
-            console.log("");
+            write(s);
+            write();
         })();
+
+        console.log(buffer);
 
         // 演出・ウェイト
         switch (feedback) {
