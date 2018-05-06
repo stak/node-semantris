@@ -4,7 +4,7 @@ import chalk from 'chalk';
 import SemantrisAPI from './api';
 import SemantrisGameState from './state';
 import SemantrisGameUpdater from './updater';
-import {GAMEMODE_ARCADE, GAMEMODE_BLOCKS} from './define';
+import {FB, GAMEMODE_ARCADE, GAMEMODE_BLOCKS} from './define';
 import * as util from './util';
 
 
@@ -41,7 +41,7 @@ class Semantris {
 
     async _mainLoop() {
         let feedback;
-        while (feedback !== SemantrisGameUpdater.FB_TICK_DIE) {
+        while (feedback !== FB.TICK_DIE) {
             await util.sleep(16);
             feedback = this.update('tick');
             this.view(this.state, 'tick', feedback);
@@ -56,7 +56,7 @@ class Semantris {
     }
 
     view(state, action, feedback) {
-        if (feedback === SemantrisGameUpdater.FB_TICK) {
+        if (feedback === FB.TICK) {
             return;
         }
         
@@ -124,12 +124,12 @@ class Semantris {
 
         // 演出・ウェイト
         switch (feedback) {
-            case SemantrisGameUpdater.FB_INPUT_FAIL:
+            case FB.INPUT_FAIL:
                 break;
-            case SemantrisGameUpdater.FB_INPUT_SUCCESS:
-            case SemantrisGameUpdater.FB_DESTROY_NORMAL:
+            case FB.INPUT_SUCCESS:
+            case FB.DESTROY_NORMAL:
                 break;
-            case SemantrisGameUpdater.FB_DESTROY_STREAK:
+            case FB.DESTROY_STREAK:
                 break;
             default:
                 break;

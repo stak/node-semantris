@@ -1,5 +1,12 @@
 import readline from 'readline';
 
+export function makeEnumObject(array) {
+    return array.reduce((o, e, i) => {
+        o[e] = e;
+        return o;
+    }, {});
+}
+
 export function getRandomElement(array) {
     return array[Math.floor(Math.random() * array.length)];
 }

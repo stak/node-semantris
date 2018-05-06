@@ -1,4 +1,5 @@
 import SemantrisGameState from './state';
+import {FB} from './define';
 
 class UpdateResult {
     constructor(next, feedback) {
@@ -11,17 +12,6 @@ function _(next, feedback) {
 }
 
 class SemantrisGameUpdater {
-    static get FB_INIT() { return 'init'; }
-    static get FB_DESTROY_FINISH() { return 'destroyed'; }
-    static get FB_DESTROY_NORMAL() { return 'destroy'; }
-    static get FB_DESTROY_STREAK() { return 'streak'; }
-    static get FB_INPUT_SUCCESS() { return 'success'; }
-    static get FB_INPUT_FAIL() { return 'fail'; }
-    static get FB_TICK() { return 'tick'; }
-    static get FB_TICK_FILL() { return 'fill'; }
-    static get FB_TICK_FALL() { return 'fall'; }
-    static get FB_TICK_DIE() { return 'die'; }
-
     static init(state, gameMode, wordSelector) {
         state = state || new SemantrisGameState();
 
@@ -39,7 +29,7 @@ class SemantrisGameUpdater {
         // プレイ可能状態にする
         next.innerState = SemantrisGameState.STATE_PLAY;
 
-        return _(next, Class.FB_INIT);
+        return _(next, FB.INIT);
     }
 
     static updateGameParams(state) {
@@ -71,12 +61,12 @@ class SemantrisGameUpdater {
         // ターゲットをボーダー以下にすることができたか
         if (index >= 0) {
             // ワードの破壊は別途 destroy() から行われる
-            return _(next, Class.FB_INPUT_SUCCESS);
+            return _(next, FB.INPUT_SUCCESS);
         } else {
             // 失敗
             next.failCount++;
             next.streakProgress = 0;
-            return _(next, Class.FB_INPUT_FAIL);
+            return _(next, FB.INPUT_FAIL);
         }
     }
 
@@ -95,7 +85,7 @@ class SemantrisGameUpdater {
         next.streakMax = decideStreakMax(state);
         
         next.innerState = SemantrisGameState.STATE_ANIM_STREAK;
-        return _(next, Class.FB_DESTROY_STREAK);
+        return _(next, FB.DESTROY_STREAK);
     }
 
     static _destroyNormal(state) {
@@ -121,13 +111,13 @@ class SemantrisGameUpdater {
         next.streakMax = state.streakMax;
 
         next.innerState = SemantrisGameState.STATE_ANIM_DESTROY;
-        return _(next, Class.FB_DESTROY_NORMAL);
+        return _(next, FB.DESTROY_NORMAL);
     }
 
     static _destroyFinish(state) {
         const next = new SemantrisGameState(state);
         next.innerState = SemantrisGameState.STATE_PLAY; // ウェイト終了、プレイ状態に戻す
-        return _(next, Class.FB_DESTROY_FINISH);
+        return _(next, FB.DESTROY_FINISH);
     }
 
     static destroy(state) {
@@ -155,7 +145,7 @@ class SemantrisGameUpdater {
         if (fillSpace < targetNeeds) {
             next.targetIndexes.push(next.height - 1);
         }
-        return _(next, Class.FB_TICK_FILL);
+        return _(next, FB.TICK_FILL);
     }
     static _tickFall(next) {
         next.candidates.push(next.makeWord());
@@ -165,7 +155,7 @@ class SemantrisGameUpdater {
         if (targetNeeds > 0) {
             next.targetIndexes.push(next.height - 1);
         }
-        return _(next, Class.FB_TICK_FALL);
+        return _(next, FB.TICK_FALL);
     }
     static _tickPlaying(next) {
         if (next.currentTime % next.fillFrame === 0 &&
@@ -179,10 +169,10 @@ class SemantrisGameUpdater {
             } else {
                 // 上まで積もったら死
                 next.innerState = SemantrisGameState.STATE_DEAD;
-                return _(next, Class.FB_TICK_DIE);
+                return _(next, FB.TICK_DIE);
             }
         } else {
-            return _(next, Class.FB_TICK);
+            return _(next, FB.TICK);
         }
     }
     static _tickWaiting(next) {
@@ -205,7 +195,7 @@ class SemantrisGameUpdater {
         if (next.stateTime >= frame) {
             return Class.destroy(next);
         } else {
-            return _(next, Class.FB_TICK);
+            return _(next, FB.TICK);
         }
     }
 
@@ -216,7 +206,7 @@ class SemantrisGameUpdater {
         if (next.isPlaying) {
             return Class._tickPlaying(next);
         } else if (next.isGameOver) {
-            return [state, Class.FB_TICK_DIE]; // 状態更新しない
+            return [state, FB.TICK_DIE]; // 状態更新しない
         } else {
             return Class._tickWaiting(next);
         }

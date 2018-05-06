@@ -1,3 +1,5 @@
+import { makeEnumObject } from "./util.mjs";
+
 export const GAMEMODE_ARCADE = 'a';
 export const GAMEMODE_BLOCKS = 'b';
 
@@ -23,3 +25,16 @@ export class MatchResult {
         return new Word([this.word, this.level]);
     }
 }
+
+export const FB = makeEnumObject([
+    'INIT',
+    'DESTROY_FINISH',
+    'DESTROY_NORMAL',
+    'DESTROY_STREAK',
+    'INPUT_SUCCESS',
+    'INPUT_FAIL',
+    'TICK',
+    'TICK_FILL',
+    'TICK_FALL',
+    'TICK_DIE',
+]);
