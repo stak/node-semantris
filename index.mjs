@@ -8,13 +8,24 @@ import {FB, GAMEMODE_ARCADE, GAMEMODE_BLOCKS} from './define';
 import * as util from './util';
 
 export default class Semantris {
-    constructor(renderer = ttyRenderer, updater = SemantrisGameUpdater, tuner = SemantrisParamTuner) {
+    constructor(userOpts = {}) {
+        const defaultOpts = {
+            updater: null,
+            renderer: ttyRenderer,
+            tuner: new SemantrisParamTuner()
+        };
+        const opts = Object.assign({}, defaultOpts, userOpts);
+        if (!opts.updater) {
+            this.updater = new SemantrisGameUpdater({
+                paramTuner: opts.tuner,
+                wordSelector: this.selectWord.bind(this)
+            });
+        } else {
+            this.updater = opts.updater;
+        }
         this.api = new SemantrisAPI();
-        this.renderer = renderer;
-        this.updater = new updater({
-            paramTuner: tuner,
-            wordSelector: this.selectWord.bind(this)
-        });
+        this.renderer = opts.renderer;
+
         this.words = null;
         this.state = null;
         this.connecting = false;

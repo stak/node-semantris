@@ -1,15 +1,11 @@
 
 export default class SementrisParamTuner {
-    constructor() {
-        throw new Error('Cannot instantiate SementrisParamTuner');
-    }
-    
-    static _stateToData(state, table) {
+    _stateToData(state, table) {
         return table[Math.min(state.stage, table.length - 1)];
     }
 
-    static streakMax(state) {
-        return SementrisParamTuner._stateToData(state, [
+    streakMax(state) {
+        return this._stateToData(state, [
             5, // 0
             5, // 500
             7, // 1000
@@ -34,8 +30,8 @@ export default class SementrisParamTuner {
         ]);
     }
 
-    static wordLevel(state) {
-        return SementrisParamTuner._stateToData(state, [
+    wordLevel(state) {
+        return this._stateToData(state, [
             [1], // 0
             [2], // 500
             [2], // 1000
@@ -50,8 +46,8 @@ export default class SementrisParamTuner {
         ]);
     }
 
-    static targetNum(state) {
-        return SementrisParamTuner._stateToData(state, [
+    targetNum(state) {
+        return this._stateToData(state, [
             1, // 0
             1, // 500
             2, // 1000
@@ -62,7 +58,7 @@ export default class SementrisParamTuner {
         ]);
     }
 
-    static targetBorder(state) {
+    targetBorder(state) {
         if (10 <= state.stage && state.stage < 20) {
             return 5;
         } else {
@@ -70,8 +66,8 @@ export default class SementrisParamTuner {
         }
     }
 
-    static fillBorder(state) {
-        return SementrisParamTuner._stateToData(state, [
+    fillBorder(state) {
+        return this._stateToData(state, [
             10, // 0
             11, // 500
             12, // 1000
@@ -86,12 +82,12 @@ export default class SementrisParamTuner {
         ]);
     }
 
-    static dieBorder(state) {
+    dieBorder(state) {
         return 26;
     }
 
-    static fillFrame(state) {
-        return SementrisParamTuner._stateToData(state, [
+    fillFrame(state) {
+        return this._stateToData(state, [
             5, // 0
             5, // 500
             5, // 1000
@@ -106,8 +102,8 @@ export default class SementrisParamTuner {
         ]);
     }
 
-    static fallFrame(state) {
-        return SementrisParamTuner._stateToData(state, [
+    fallFrame(state) {
+        return this._stateToData(state, [
             999999, // 0
             120, // 500
             60, // 1000
@@ -132,8 +128,8 @@ export default class SementrisParamTuner {
         ]);
     }
 
-    static sortFrame(state) {
-        return SementrisParamTuner._stateToData(state, [
+    sortFrame(state) {
+        return this._stateToData(state, [
             60, // 0
             60, // 500
             50, // 1000
@@ -158,8 +154,8 @@ export default class SementrisParamTuner {
         ]);
     }
 
-    static destroyFrame(state) {
-        return SementrisParamTuner._stateToData(state, [
+    destroyFrame(state) {
+        return this._stateToData(state, [
             30, // 0
             30, // 500
             30, // 1000
@@ -184,8 +180,8 @@ export default class SementrisParamTuner {
         ]);
     }
 
-    static streakFrame(state) {
-        return SementrisParamTuner._stateToData(state, [
+    streakFrame(state) {
+        return this._stateToData(state, [
             120, // 0
             110, // 500
             110, // 1000
