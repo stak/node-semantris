@@ -16,12 +16,7 @@ class Semantris {
         this.state = null;
     }
 
-    reset() {
-        this.state = null;
-        return this;
-    }
-
-    async update(action, ...args) {
+    update(action, ...args) {
         args.unshift(this.state);
         const {next, feedback} = this.updater[action].apply(this.updater, args);
 
@@ -35,11 +30,12 @@ class Semantris {
     async start(gameMode = GAMEMODE_ARCADE) {
         this.words = await this.api.start(gameMode);
 
-        return await this.reset(gameMode);
+        return this.reset(gameMode);
     }
 
-    async reset(gameMode = GAMEMODE_ARCADE) {
-        const feedback = await this.reset().update('init', gameMode, this.selectWords.bind(this));
+    reset(gameMode = GAMEMODE_ARCADE) {
+        this.state = null;
+        const feedback = this.update('init', gameMode, this.selectWords.bind(this));
         this.view(feedback);
         this._mainLoop().then(); // 初期化が終わったらメインループ開始
         
@@ -58,13 +54,13 @@ class Semantris {
     async input(input) {
         const matchResult = await this.api.rank(input,
                                     ...this.state.paramsForRank);
-        const feedback = await this.update('input', matchResult);
+        const feedback = this.update('input', matchResult);
         this.view(feedback);
     }
 
     view(feedback) {
         if (feedback === SemantrisGameUpdater.FB_TICK) {
-
+            return;
         }
         // process.stdout.write('\x1b[2J');
         // process.stdout.write('\x1b[0f');
@@ -82,7 +78,7 @@ class Semantris {
             }
         }
 
-        // feedback に応じた演出・ウェイト
+        // 演出・ウェイト
         switch (feedback) {
             case SemantrisGameUpdater.FB_INPUT_FAIL:
                 break;

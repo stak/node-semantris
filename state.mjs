@@ -60,7 +60,7 @@ export default class SemantrisGameState {
         return this._innerState;
     }
     set innerState(value) {
-        this._innerState = innerState;
+        this._innerState = value;
         this.stateSince = this.currentTime;
     }
     get stateTime() {
