@@ -80,6 +80,10 @@ function renderEffect(state) {
     // TODO:
 }
 
+function renderPrompt() {
+    process.stdout.write(pad + '> ');
+}
+
 export default function ttyRenderer(state, action, feedback) {
     if (feedback === FB.TICK) {
         return;
@@ -92,4 +96,5 @@ export default function ttyRenderer(state, action, feedback) {
     renderStatusBar(state, feedback);
     renderEffect(state);
     flush();
+    renderPrompt();
 }
