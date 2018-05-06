@@ -1,23 +1,26 @@
 import SemantrisGameState from './state';
 
 class UpdateResult {
-    constructor(next, feedback, cont) {
+    constructor(next, feedback) {
         this.next = next;
         this.feedback = feedback;
-        this.cont = cont;
     }
 }
-function _(next, feedback, cont) {
-    return new UpdateResult(next, feedback, cont);
+function _(next, feedback) {
+    return new UpdateResult(next, feedback);
 }
 
-class SemantrisGameUpdator {
+class SemantrisGameUpdater {
     static get FB_INIT() { return 'init'; }
     static get FB_DESTROY_FINISH() { return 'destroyed'; }
     static get FB_DESTROY_NORMAL() { return 'destroy'; }
     static get FB_DESTROY_STREAK() { return 'streak'; }
     static get FB_INPUT_SUCCESS() { return 'success'; }
     static get FB_INPUT_FAIL() { return 'fail'; }
+    static get FB_TICK() { return 'tick'; }
+    static get FB_TICK_FILL() { return 'fill'; }
+    static get FB_TICK_FALL() { return 'fall'; }
+    static get FB_TICK_DIE() { return 'die'; }
 
     static init(state, gameMode, wordSelector) {
         state = state || new SemantrisGameState();
@@ -33,33 +36,38 @@ class SemantrisGameUpdator {
         next.fillBorder = decideFillBorder(state);
         next.dieBorder = decideDieBorder(state);
         next.fallFrame = decideFallFrame(state);
+        next.fillFrame = decideFillFrame(state);
+        next.sortFrame = decideSortFrame(state);
+        next.destroyFrame = decideDestroyFrame(state);
+        next.streakFrame = decideStreakFrame(state);
+        next.wordSelector = wordSelector;
 
         // ワードの初期化
-        next.candidates = wordSelector(decideFillBorder(state),
-                                       decideWordLevel(state));
-        const head = decideFillBorder(state) - decideTargetNum(state);
-        next.targetIndexes = Array(decideTargetNum(state)).fill()
-                             .map((e, i) => head + i);
+        next.candidates = next.makeInitialWords();
+        next.targets = next.candidates.slice(-next.targetNum);
+
+        // プレイ可能状態にする
+        next.innerState = SemantrisGameState.STATE_PLAY;
 
         return _(next, Class.FB_INIT);
     }
 
     static input(state, matchResults) {
         const next = new SemantrisGameState(state);
+        next.innerState = SemantrisGameState.STATE_ANIM_SORT;
 
         // 判定結果によってワードを並び替え
         next.candidates = matchResults.map(r => r.toWord());
-        next.targetIndexes = matchResults.filter(r => r.isTarget)
-                                         .map(r => matchResults.findIndex(rr => r === rr));
+        next.targets = matchResults.filter(r => r.isTarget)
+                                   .map(r => r.toWord());
         // 最もマッチしたターゲットワードのインデクス
         const index = matchResults.slice(0, next.targetBorder)
                                   .findIndex(r => r.isTarget);
 
         // ターゲットをボーダー以下にすることができたか
         if (typeof index !== 'undefined') {
-            next.innerState = SemantrisGameState.STATE_ANIM;
-            // ワードの破壊、スコア加算は別途 destroy() で行う
-            return _(next, Class.FB_INPUT_SUCCESS, Class.destroy.name);
+            // ワードの破壊は別途 destroy() から行われる
+            return _(next, Class.FB_INPUT_SUCCESS);
         } else {
             // 失敗
             next.failCount++;
@@ -78,7 +86,7 @@ class SemantrisGameUpdator {
         next.breakCount += next.targetIndexes.length;
         next.targetIndexes.length = 0;
         
-        next.innerState = SemantrisGameState.STATE_PLAY;
+        next.innerState = SemantrisGameState.STATE_ANIM_STREAK;
         return _(next, Class.FB_DESTROY_STREAK);
     }
 
@@ -100,15 +108,14 @@ class SemantrisGameUpdator {
         }
         ++next.streakProgress;
 
-        // 次の連鎖が発生するか見て内部状態を更新
-        const isFinish = Class.destroy(next).feedback 
-                         === Class.FB_DESTROY_FINISH;
-        next.innerState = isFinish ?
-                            SemantrisGameState.STATE_PLAY: // 打ち止め
-                            SemantrisGameState.STATE_ANIM; // 連鎖中
-        
-        return _(next, Class.FB_DESTROY_NORMAL,
-                 !isFinish ? Class.destroy.name : null);
+        next.innerState = SemantrisGameState.STATE_ANIM_DESTROY;
+        return _(next, Class.FB_DESTROY_NORMAL);
+    }
+
+    static _destroyFinish(state) {
+        const next = new SemantrisGameState(state);
+        next.innerState = SemantrisGameState.STATE_PLAY; // ウェイト終了、プレイ状態に戻す
+        return _(next, Class.FB_DESTROY_FINISH);
     }
 
     static destroy(state) {
@@ -123,17 +130,89 @@ class SemantrisGameUpdator {
             // 通常のライン消し
             return Class._destroyNormal(state);
         } else {
-            // 更新なし
-            return _(state, Class.FB_DESTROY_FINISH);
+            // 更新終了
+            return Class._destroyFinish(state);
         }
     }
 
-    static tick(state, ellapsedTime) {
+    static _tickFill(next) {
+        next.candidates.push(next.makeWord());
 
+        // ターゲットは fill 領域の最後（上部）に来る
+        const fillSpace = next.fillBorder - next.height;
+        const targetNeeds = next.targetNum - next.targets.length;
+        if (fillSpace <= targetNeeds) {
+            next.targetIndexes.push(next.height - 1);
+        }
+        return _(next, Class.FB_TICK_FILL);
+    }
+    static _tickFall(next) {
+        next.candidates.push(next.makeWord());
+
+        // ターゲット不足していたらターゲットとして追加
+        const targetNeeds = next.targetNum - next.targets.length;
+        if (targetNeeds > 0) {
+            next.targetIndexes.push(next.height - 1);
+        }
+        return _(next, Class.FB_TICK_FALL);
+    }
+    static _tickPlaying(next) {
+        if (next.currentTime % next.fillFrame === 0 &&
+            next.height < next.fillBorder) {
+            // fill 領域はスピーディに埋まる
+            return Class._tickFill(next);
+        } else if (next.currentTime % next.fallFrame === 0) {
+            if (next.height < next.dieBorder) {
+                // その後はのんびり追加されていく
+                return Class._tickFall(next);
+            } else {
+                // 上まで積もったら死
+                next.innerState = SemantrisGameState.STATE_DEAD;
+                return _(next, Class.FB_TICK_DIE);
+            }
+        } else {
+            return _(next, Class.FB_TICK);
+        }
+    }
+    static _tickWaiting(next) {
+        let frame;
+
+        switch (next.innerState) {
+        case SemantrisGameState.STATE_ANIM_SORT:
+            frame = next.sortFrame;
+            break;
+        case SemantrisGameState.STATE_ANIM_DESTROY:
+            frame = next.destroyFrame;
+            break;
+        case SemantrisGameState.STATE_ANIM_STREAK:
+            frame = next.streakFrame;
+            break;
+        default:
+            throw new Error("unknown state");
+        }
+
+        if (next.stateTime >= frame) {
+            return Class.destroy(next);
+        } else {
+            return _(next, Class.FB_TICK);
+        }
+    }
+
+    static tick(state) {
+        const next = new SemantrisGameState(state);
+        next.currentTime++;
+
+        if (next.isPlaying) {
+            return Class._tickPlaying(next);
+        } else if (next.isGameOver) {
+            return [state, Class.FB_TICK_DIE]; // 状態更新しない
+        } else {
+            return Class._tickWaiting(next);
+        }
     }
 }
 
-const Class = SemantrisGameUpdator;
+const Class = SemantrisGameUpdater;
 
 function stateToData(state, table) {
     if (state.stage > table.length - 1) {
@@ -212,8 +291,24 @@ function decideDieBorder(state) {
     return 25; // TEMP
 }
 
+function decideFillFrame(state) {
+    return 5; // TEMP
+}
+
 function decideFallFrame(state) {
     return 120; // TEMP
 }
 
-export default SemantrisGameUpdator;
+function decideSortFrame(state) {
+    return 30; // TEMP
+}
+
+function decideDestroyFrame(state) {
+    return 30; // TEMP
+}
+
+function decideStreakFrame(state) {
+    return 90; // TEMP
+}
+
+export default SemantrisGameUpdater;

@@ -1,18 +1,17 @@
 'use strict';
 import chalk from 'chalk';
-import readline from 'readline';
 
 import SemantrisAPI from './api';
 import SemantrisGameState from './state';
-import SemantrisGameUpdator from './updator';
+import SemantrisGameUpdater from './updater';
 import {GAMEMODE_ARCADE, GAMEMODE_BLOCKS} from './define';
 import * as util from './util';
 
 
 class Semantris {
-    constructor(updator = SemantrisGameUpdator) {
+    constructor(updater = SemantrisGameUpdater) {
         this.api = new SemantrisAPI('curated23', 'SqYg6-xZ44vb_Z4');
-        this.updator = updator;
+        this.updater = updater;
         this.words = null;
         this.state = null;
     }
@@ -24,35 +23,49 @@ class Semantris {
 
     async update(action, ...args) {
         args.unshift(this.state);
-        const {next, feedback, cont} = this.updator[action].apply(this.updator, args);
+        const {next, feedback} = this.updater[action].apply(this.updater, args);
 
-        console.log(chalk.yellow("update(" + action + ") => " + feedback));
+        console.log(chalk.yellow("update(" + action + ")") + " => " +
+                    chalk.magenta(feedback));
         
         this.state = next;
-        await this.view(feedback);
-        
-        return cont ? await this.update(cont) : this;
+        return feedback;
     }
 
-    async gameStart(gameMode = GAMEMODE_ARCADE) {
+    async start(gameMode = GAMEMODE_ARCADE) {
         this.words = await this.api.start(gameMode);
 
-        return await this.gameReset(gameMode);
+        return await this.reset(gameMode);
     }
 
-    async gameReset(gameMode = GAMEMODE_ARCADE) {
-        return await this.reset().update('init', gameMode, (num, levels) => {
-            return this.selectWords(num, levels, false);
-        });
+    async reset(gameMode = GAMEMODE_ARCADE) {
+        const feedback = await this.reset().update('init', gameMode, this.selectWords.bind(this));
+        this.view(feedback);
+        this._mainLoop().then(); // 初期化が終わったらメインループ開始
+        
+        return this;
     }
 
-    async gameInput(input) {
+    async _mainLoop() {
+        let feedback;
+        while (feedback !== SemantrisGameUpdater.FB_TICK_DIE) {
+            await util.sleep(16);
+            feedback = this.update('tick');
+            this.view(feedback);
+        }
+    }
+
+    async input(input) {
         const matchResult = await this.api.rank(input,
                                     ...this.state.paramsForRank);
-        return await this.update('input', matchResult);
+        const feedback = await this.update('input', matchResult);
+        this.view(feedback);
     }
 
-    async view(feedback) {
+    view(feedback) {
+        if (feedback === SemantrisGameUpdater.FB_TICK) {
+
+        }
         // process.stdout.write('\x1b[2J');
         // process.stdout.write('\x1b[0f');
 
@@ -71,14 +84,12 @@ class Semantris {
 
         // feedback に応じた演出・ウェイト
         switch (feedback) {
-            case SemantrisGameUpdator.FB_INPUT_FAIL:
+            case SemantrisGameUpdater.FB_INPUT_FAIL:
                 break;
-            case SemantrisGameUpdator.FB_INPUT_SUCCESS:
-            case SemantrisGameUpdator.FB_DESTROY_NORMAL:
-                await util.sleep(400);
+            case SemantrisGameUpdater.FB_INPUT_SUCCESS:
+            case SemantrisGameUpdater.FB_DESTROY_NORMAL:
                 break;
-            case SemantrisGameUpdator.FB_DESTROY_STREAK:
-                await util.sleep(1500);
+            case SemantrisGameUpdater.FB_DESTROY_STREAK:
                 break;
             default:
                 break;
@@ -87,58 +98,47 @@ class Semantris {
         process.stdout.write('\n> '); // prompt
     }
 
-    filterWord(levels, filterCurrentWords = true) {
+    filterWord(levels, excludes = []) {
         let words = this.words;
         if (typeof levels === 'number') {
             words = words.filter(w => w.level === levels);
         } else if (levels instanceof Array) {
             words = words.filter(w => levels.includes(w.level));
         }
-        if (filterCurrentWords) {
-            words = words.filter(w => this.state.candidates.every(
-                                 c => c.word !== w.word));
+        if (excludes instanceof Array && excludes.length) {
+            words = words.filter(w => excludes.every(
+                                 e => e.word !== w.word));
         }
         return words;
     }
-    selectWord(levels, filterCurrentWords = true) {
-        const words = this.filterWord(levels, filterCurrentWords);
+    selectWord(levels, excludes = []) {
+        const words = this.filterWord(levels, excludes);
         return util.getRandomElement(words);
     }
-    selectWords(num, levels, filterCurrentWords = true) {
-        const words = this.filterWord(levels, filterCurrentWords);
+    selectWords(num, levels, excludes = []) {
+        const words = this.filterWord(levels, excludes);
         return util.getRandomElements(words, num);
     }
 }
 
-function line(rl) {
-    return new Promise((resolve, reject) => {
-        function onLine(line) {
-            resolve(line);
-            rl.removeListener('close', onClose);
-        }
-        function onClose() {
-            process.stdin.destroy();
-            reject();
-            rl.removeListener('line', onLine);
-        }
-        rl.once('line', onLine)
-          .once('close', onClose);
-    });
-}
-
-new Semantris().gameStart().then(async (game) => {
-    const rl = readline.createInterface(process.stdin);
+new Semantris().start().then(async (game) => {
     for (let input;;) {
         try {
-            input = await line(rl);
+            input = await util.line();
         } catch (e) {
             console.log("(exit)");
             break;
         }
+        if (game.state.isGameOver) {
+            console.log("");
+            console.log(chalk.red('GAME OVER'));
+            console.log(chalk.green('SCORE = ' + game.state.score));
+            break;
+        }
         if (input) {
-            await game.gameInput(input);
+            await game.input(input);
         } else {
-            await game.view();
+            game.view();
         }
     }
 });

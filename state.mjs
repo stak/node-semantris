@@ -1,10 +1,15 @@
 
+const BREAK_SCORE = 15;
+const LINE_SCORE = 10;
+const STAGE_SPAN = 500;
 
 export default class SemantrisGameState {
     static get STATE_INIT() { return 0; }
     static get STATE_PLAY() { return 1; }
-    static get STATE_ANIM() { return 2; }
-    static get STATE_OVER() { return 3; }
+    static get STATE_ANIM_SORT() { return 2; }
+    static get STATE_ANIM_DESTROY() { return 3; }
+    static get STATE_ANIM_STREAK() { return 4 }
+    static get STATE_DEAD() { return 5; }
 
     constructor(o) {
         if (o instanceof SemantrisGameState) {
@@ -18,8 +23,9 @@ export default class SemantrisGameState {
             this.breakLine = 0;
             this.streakProgress = 0;
             this.streakCount = 0;
+            this.currentTime = 0;
 
-            // ゲーム設定、updator によって更新される
+            // ゲーム設定、updater によって更新される
             this.gameMode = '';
             this.streakMax = 0;
             this.wordLevel = null;
@@ -28,8 +34,13 @@ export default class SemantrisGameState {
             this.fillBorder = 0;
             this.dieBorder = 0;
             this.fallFrame = 0;
+            this.fillFrame = 0;
+            this.sortFrame = 0;
+            this.destroyFrame = 0;
+            this.streakFrame = 0;
+            this.wordSelector = null;
 
-            // 表示ワード、updator によって更新される
+            // 表示ワード、updater によって更新される
             this.candidates = null;
             this.targetIndexes = null;
 
@@ -38,19 +49,46 @@ export default class SemantrisGameState {
         }
     }
 
+    makeWord() {
+        return this.wordSelector(1, this.wordLevel, this.candidates.map(c => c.word));
+    }
+    makeInitialWords() {
+        return this.wordSelector(this.fillBorder, this.wordLevel);
+    }
+
+    get innerState() {
+        return this._innerState;
+    }
+    set innerState(value) {
+        this._innerState = innerState;
+        this.stateSince = this.currentTime;
+    }
+    get stateTime() {
+        return this.currentTime - this.stateSince;
+    }
+
     get targets() {
         return this.targetIndexes.map(i => this.candidates[i]);
     }
-
+    set targets(value) {
+        this.targetIndexes = value.map(v => this.candidates.findIndex(c => c.word === v.word));
+    }
+    get height() {
+        return this.candidates.length;
+    }
     get score() {
-        return this.breakCount * 15 +
-               this.breakLine * 10;
+        return this.breakCount * BREAK_SCORE +
+               this.breakLine * LINE_SCORE;
     }
-
     get stage() {
-        return Math.floor(this.score / 500);
+        return Math.floor(this.score / STAGE_SPAN);
     }
-
+    get isGameOver() {
+        return this.innerState === SemantrisGameState.STATE_DEAD;
+    }
+    get isPlaying() {
+        return this.innerState === SemantrisGameState.STATE_PLAY;
+    }
     get paramsForRank() {
         return [this.candidates, this.targets, this.gameMode];
     }
