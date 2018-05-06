@@ -38,7 +38,6 @@ export default class SemantrisGameState {
             this.sortFrame = 0;
             this.destroyFrame = 0;
             this.streakFrame = 0;
-            this.wordSelector = null;
 
             // 表示ワード、updater によって更新される
             this.candidates = null;
@@ -47,10 +46,6 @@ export default class SemantrisGameState {
             // 内部状態
             this.innerState = SemantrisGameState.STATE_INIT;
         }
-    }
-
-    makeWord() {
-        return this.wordSelector(this.wordLevel, this.candidates.map(c => c.word));
     }
 
     get innerState() {

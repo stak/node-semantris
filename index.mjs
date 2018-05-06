@@ -4,14 +4,18 @@ import chalk from 'chalk';
 import SemantrisAPI from './api';
 import SemantrisGameState from './state';
 import SemantrisGameUpdater from './updater';
+import SemantrisParamTuner from './paramTuner';
 import {FB, GAMEMODE_ARCADE, GAMEMODE_BLOCKS} from './define';
 import * as util from './util';
 
 
 class Semantris {
-    constructor(updater = SemantrisGameUpdater) {
+    constructor(updater = SemantrisGameUpdater, tuner = SemantrisParamTuner) {
         this.api = new SemantrisAPI('curated23', 'SqYg6-xZ44vb_Z4');
-        this.updater = updater;
+        this.updater = new updater({
+            paramTuner: tuner,
+            wordSelector: this.selectWord.bind(this)
+        });
         this.words = null;
         this.state = null;
     }
@@ -32,7 +36,7 @@ class Semantris {
 
     reset(gameMode = GAMEMODE_ARCADE) {
         this.state = null;
-        const feedback = this.update('init', gameMode, this.selectWord.bind(this));
+        const feedback = this.update('init', gameMode);
         this.view(this.state, 'init', feedback);
         this._mainLoop().then(); // 初期化が終わったらメインループ開始
         
