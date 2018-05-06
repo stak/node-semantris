@@ -65,7 +65,7 @@ class SemantrisGameUpdater {
                                   .findIndex(r => r.isTarget);
 
         // ターゲットをボーダー以下にすることができたか
-        if (typeof index !== 'undefined') {
+        if (index >= 0) {
             // ワードの破壊は別途 destroy() から行われる
             return _(next, Class.FB_INPUT_SUCCESS);
         } else {
@@ -80,7 +80,7 @@ class SemantrisGameUpdater {
         const next = new SemantrisGameState(state);
         next.streakCount++;
         next.streakProgress = 0;
-        
+
         // 次回 streak 回数は当該ボーナスの得点は含まずに計算する
         next.streakMax = decideStreakMax(state);
 
